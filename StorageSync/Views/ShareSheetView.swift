@@ -10,3 +10,9 @@ struct ShareSheetView: UIViewControllerRepresentable {
     }
     func updateUIViewController(_ uiVC: UICloudSharingController, context: Context) {}
 }
+
+#Preview {
+    let record = CKRecord(recordType: "Preview")
+    let share = CKShare(rootRecord: record)
+    return ShareSheetView(share: share)
+}

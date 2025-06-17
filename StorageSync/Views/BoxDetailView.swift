@@ -2,14 +2,14 @@ import SwiftUI
 import UIKit
 
 struct BoxDetailView: View {
-    @ObservedObject var vm: BoxDetailViewModel
+    @StateObject private var vm: BoxDetailViewModel
     @State private var newItemName = ""
     @State private var showingImagePicker = false
     @State private var imagePickerSource: UIImagePickerController.SourceType = .photoLibrary
     @State private var showingShare = false
 
     init(box: Box) {
-        self.vm = BoxDetailViewModel(box: box)
+        _vm = StateObject(wrappedValue: BoxDetailViewModel(box: box))
     }
 
     var body: some View {
@@ -26,7 +26,9 @@ struct BoxDetailView: View {
                     }
                 }
                 .onDelete { offsets in
-                    offsets.map { vm.items[$0] }.forEach(vm.deleteItem)
+                    for index in offsets {
+                        vm.deleteItem(vm.items[index])
+                    }
                 }
 
                 HStack {
@@ -71,8 +73,8 @@ struct BoxDetailView: View {
                 }
             }
         }
-        .listStyle(InsetGroupedListStyle())  // iOS 14+ inset style :contentReference[oaicite:4]{index=4}
-        .navigationTitle(vm.box.title)       // Exposes title from public box property :contentReference[oaicite:5]{index=5}
+        .listStyle(InsetGroupedListStyle())
+        .navigationTitle(vm.box.title)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button { showingShare = true } label: {
@@ -83,7 +85,11 @@ struct BoxDetailView: View {
         // Image picker sheet
         .sheet(isPresented: $showingImagePicker) {
             ImagePicker(sourceType: imagePickerSource) { image in
-                try? vm.addPhoto(image: image)
+                do {
+                    try vm.addPhoto(image: image)
+                } catch {
+                    print("Add photo error: \(error)")
+                }
                 showingImagePicker = false
             }
         }
@@ -94,4 +100,13 @@ struct BoxDetailView: View {
             }
         }
     }
+}
+
+
+#Preview {
+    let context = SyncManager.shared.container.viewContext
+    let box = Box(context: context)
+    box.id = UUID()
+    box.title = "Preview Box"
+    return NavigationView { BoxDetailView(box: box) }
 }

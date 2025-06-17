@@ -2,6 +2,7 @@ import Foundation
 import Combine
 import CoreData
 import CloudKit
+import UIKit
 
 @MainActor
 final class BoxDetailViewModel: ObservableObject {
@@ -47,5 +48,43 @@ final class BoxDetailViewModel: ObservableObject {
     }
     */
     
-    // ... 省略 add/deleteItem, add/deletePhoto 等方法 ...
+    // MARK: - Item Management
+    func addItem(name: String, note: String? = nil) {
+        let item = Item(context: context)
+        item.id = UUID()
+        item.name = name
+        item.note = note
+        item.parent = box
+        SyncManager.shared.saveContext()
+        fetchContents()
+    }
+
+    func deleteItem(_ item: Item) {
+        context.delete(item)
+        SyncManager.shared.saveContext()
+        fetchContents()
+    }
+
+    // MARK: - Photo Management
+    func addPhoto(image: UIImage) throws {
+        guard let data = image.jpegData(compressionQuality: 0.8) else { return }
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("\(UUID().uuidString).jpg")
+        try data.write(to: url)
+
+        let photo = Photo(context: context)
+        photo.id = UUID()
+        photo.localURL = url
+        photo.box = box
+
+        SyncManager.shared.saveContext()
+        fetchContents()
+    }
+
+    func deletePhoto(_ photo: Photo) {
+        try? FileManager.default.removeItem(at: photo.localURL)
+        context.delete(photo)
+        SyncManager.shared.saveContext()
+        fetchContents()
+    }
 }

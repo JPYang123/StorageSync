@@ -42,3 +42,8 @@ struct BoxListView: View {
         offsets.map { vm.boxes[$0] }.forEach(vm.deleteBox)
     }
 }
+
+
+#Preview {
+    BoxListView()
+}

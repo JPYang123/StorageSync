@@ -11,7 +11,7 @@ import SwiftUI
 struct StorageSyncApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            BoxListView()
         }
     }
 }

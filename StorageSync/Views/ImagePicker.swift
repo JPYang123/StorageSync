@@ -35,3 +35,7 @@ struct ImagePicker: UIViewControllerRepresentable {
         }
     }
 }
+
+#Preview {
+    ImagePicker(sourceType: .photoLibrary) { _ in }
+}

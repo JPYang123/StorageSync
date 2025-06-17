@@ -42,3 +42,8 @@ struct AddBoxView: View {
         }
     }
 }
+
+
+#Preview {
+    AddBoxView(isPresented: .constant(true))
+}
