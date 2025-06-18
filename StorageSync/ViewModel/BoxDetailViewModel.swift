@@ -39,6 +39,29 @@ final class BoxDetailViewModel: ObservableObject {
         box.ckShare
     }
 
+    /// Create a `CKShare` for the current box if it doesn't already have one.
+     /// The created share is stored in `box.ckShare` and persisted to Core Data.
+     func createShare(completion: @escaping (CKShare?) -> Void) {
+         // If a share already exists, simply return it.
+         if let existing = box.ckShare {
+             completion(existing)
+             return
+         }
+
+         let container = SyncManager.shared.container
+         container.share([box], to: nil) { objectIDs, share, _, error in
+             DispatchQueue.main.async {
+                 if let share = share {
+                     self.box.ckShare = share
+                     SyncManager.shared.saveContext()
+                 } else if let error = error {
+                     print("Create share error: \(error)")
+                 }
+                 completion(share)
+             }
+         }
+     }
+
     // 如需获取 CKRecord，可启用以下代码
     /*
     var record: CKRecord? {

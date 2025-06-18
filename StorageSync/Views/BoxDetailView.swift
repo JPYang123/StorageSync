@@ -77,7 +77,11 @@ struct BoxDetailView: View {
         .navigationTitle(vm.box.title)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button { showingShare = true } label: {
+                Button {
+                     vm.createShare { share in
+                         if share != nil { showingShare = true }
+                     }
+                 } label: {
                     Image(systemName: "square.and.arrow.up")
                 }
             }
