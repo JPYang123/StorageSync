@@ -6,7 +6,7 @@ import CloudKit
 final class SyncManager {
     static let shared = SyncManager()
     let container: NSPersistentCloudKitContainer
-    private let ckContainer = CKContainer.default()
+    private let ckContainer = CloudKitConfig.container
     private let subscriptionID = "com.yourapp.familysync"
 
     private init() {
@@ -17,9 +17,18 @@ final class SyncManager {
                         forKey: NSPersistentHistoryTrackingKey)
         desc?.setOption(true as NSNumber,
                         forKey: NSPersistentStoreRemoteChangeNotificationPostOptionKey)
-
+        if let options = desc?.cloudKitContainerOptions {
+             options.databaseScope = .public
+         } else {
+             let options = NSPersistentCloudKitContainerOptions(
+                 containerIdentifier: "iCloud.com.JPYang.SafePass")
+             options.databaseScope = .public
+             desc?.cloudKitContainerOptions = options
+         }
+        
         container.loadPersistentStores { _, error in
             if let error = error { fatalError("Store load error: \(error)") }
+            DebugLogger.log("Persistent stores loaded")
         }
         NotificationCenter.default.addObserver(
             self,
@@ -31,6 +40,7 @@ final class SyncManager {
     }
 
     @objc private func handleRemoteChange(_ note: Notification) {
+        DebugLogger.log("Remote change received")
         container.viewContext.perform {
             self.container.viewContext.mergeChanges(fromContextDidSave: note)
         }
@@ -40,20 +50,33 @@ final class SyncManager {
         let sub = CKDatabaseSubscription(subscriptionID: subscriptionID)
         let info = CKSubscription.NotificationInfo()
         info.shouldSendContentAvailable = true
+        info.alertBody = "Storage updated"
+        info.soundName = "default"
         sub.notificationInfo = info
 
         let op = CKModifySubscriptionsOperation(
             subscriptionsToSave: [sub],
             subscriptionIDsToDelete: []
         )
-        ckContainer.privateCloudDatabase.add(op)
+        op.modifySubscriptionsCompletionBlock = { _, _, error in
+            if let error = error {
+                DebugLogger.log("Subscribe error: \(error)")
+            } else {
+                DebugLogger.log("Subscription registered")
+            }
+        }
+        ckContainer.publicCloudDatabase.add(op)
     }
 
     func saveContext() {
         let ctx = container.viewContext
         guard ctx.hasChanges else { return }
-        do { try ctx.save() }
-        catch { print("Save error: \(error)") }
+        do {
+            try ctx.save()
+            DebugLogger.log("Context saved")
+        } catch {
+            DebugLogger.log("Save error: \(error)")
+        }
     }
 
     private static func makeModel() -> NSManagedObjectModel {

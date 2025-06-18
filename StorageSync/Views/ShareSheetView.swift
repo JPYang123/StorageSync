@@ -6,7 +6,7 @@ struct ShareSheetView: UIViewControllerRepresentable {
 
     func makeUIViewController(context: Context) -> UICloudSharingController {
         UICloudSharingController(share: share,
-                                 container: CKContainer.default())
+                                 container: CloudKitConfig.container)
     }
     func updateUIViewController(_ uiVC: UICloudSharingController, context: Context) {}
 }

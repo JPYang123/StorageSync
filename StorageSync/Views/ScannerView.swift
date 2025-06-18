@@ -17,8 +17,14 @@ struct ScannerView: UIViewControllerRepresentable {
         // 使用公开的 session 属性
         let previewLayer = AVCaptureVideoPreviewLayer(session: scanner.session)
         previewLayer.videoGravity = AVLayerVideoGravity.resizeAspectFill
-        previewLayer.frame = controller.view.bounds
-        controller.view.layer.addSublayer(previewLayer)
+        
+        // Add a container view so the preview layer resizes correctly
+        let previewView = UIView(frame: controller.view.bounds)
+        previewView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        controller.view.addSubview(previewView)
+
+        previewLayer.frame = previewView.bounds
+        previewView.layer.addSublayer(previewLayer)
 
         scanner.startScanning()
         context.coordinator.scanner = scanner
