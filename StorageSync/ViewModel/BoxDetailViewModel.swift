@@ -20,7 +20,7 @@ final class BoxDetailViewModel: ObservableObject {
         self.context = context
         fetchContents()
         NotificationCenter.default.publisher(
-            for: .NSManagedObjectContextDidSave,
+            for: .NSManagedObjectContextObjectsDidChange,
             object: context
         )
         .sink { [weak self] _ in self?.fetchContents() }
