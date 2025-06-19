@@ -1,3 +1,4 @@
+// BoxDetailView.swift
 import SwiftUI
 import UIKit
 
@@ -7,17 +8,17 @@ struct BoxDetailView: View {
     @State private var showingImagePicker = false
     @State private var imagePickerSource: UIImagePickerController.SourceType = .photoLibrary
     @State private var showingShare = false
-
+    
     init(box: Box) {
         _vm = StateObject(wrappedValue: BoxDetailViewModel(box: box))
     }
-
+    
     var body: some View {
         List {
             Section(header: Text("Items")) {
                 ForEach(vm.items, id: \.id) { item in
                     HStack {
-                        Text(item.name)
+                        Text(item.name ?? "Untitled Item")
                         Spacer()
                         if let note = item.note, !note.isEmpty {
                             Image(systemName: "note.text")
@@ -30,7 +31,7 @@ struct BoxDetailView: View {
                         vm.deleteItem(vm.items[index])
                     }
                 }
-
+                
                 HStack {
                     TextField("New item name", text: $newItemName)
                     Button(action: {
@@ -42,12 +43,13 @@ struct BoxDetailView: View {
                     .disabled(newItemName.isEmpty)
                 }
             }
-
+            
             Section(header: Text("Photos")) {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 12) {
                         ForEach(vm.photos, id: \.id) { photo in
-                            if let uiImage = UIImage(contentsOfFile: photo.localURL.path) {
+                            if let url = photo.localURL,
+                               let uiImage = UIImage(contentsOfFile: url.path) {
                                 Image(uiImage: uiImage)
                                     .resizable()
                                     .scaledToFill()
@@ -60,6 +62,7 @@ struct BoxDetailView: View {
                     }
                     .padding(.vertical, 4)
                 }
+                
                 HStack {
                     Button("Take Photo") {
                         imagePickerSource = .camera
@@ -74,14 +77,14 @@ struct BoxDetailView: View {
             }
         }
         .listStyle(InsetGroupedListStyle())
-        .navigationTitle(vm.box.title)
+        .navigationTitle(vm.box.title ?? "Untitled Box")
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
-                     vm.createShare { share in
-                         if share != nil { showingShare = true }
-                     }
-                 } label: {
+                    vm.createShare { share in
+                        if share != nil { showingShare = true }
+                    }
+                } label: {
                     Image(systemName: "square.and.arrow.up")
                 }
             }
@@ -105,7 +108,6 @@ struct BoxDetailView: View {
         }
     }
 }
-
 
 #Preview {
     let context = SyncManager.shared.container.viewContext

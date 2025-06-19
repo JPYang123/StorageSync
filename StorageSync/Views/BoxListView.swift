@@ -5,16 +5,16 @@ import CloudKit
 struct BoxListView: View {
     @StateObject private var vm = BoxListViewModel()
     @State private var showingAddBox = false
-
+    
     var body: some View {
         NavigationView {
             List {
                 ForEach(vm.boxes, id: \.id) { box in
                     NavigationLink(destination: BoxDetailView(box: box)) {
                         HStack {
-                            Text(box.title)
+                            Text(box.title ?? "Untitled Box")
                             Spacer()
-                            if let code = box.barcode {
+                            if let code = box.barcode, !code.isEmpty {
                                 Image(systemName: "barcode")
                                     .foregroundColor(.secondary)
                                     .help(code)
@@ -37,12 +37,11 @@ struct BoxListView: View {
             }
         }
     }
-
+    
     private func delete(at offsets: IndexSet) {
         offsets.map { vm.boxes[$0] }.forEach(vm.deleteBox)
     }
 }
-
 
 #Preview {
     BoxListView()

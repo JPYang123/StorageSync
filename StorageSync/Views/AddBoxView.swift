@@ -3,11 +3,12 @@ import SwiftUI
 
 struct AddBoxView: View {
     @Binding var isPresented: Bool
-    @StateObject private var vm = BoxListViewModel()
     @State private var title: String = ""
     @State private var barcode: String = ""
     @State private var showingScanner = false
 
+    private let context = SyncManager.shared.container.viewContext
+    
     var body: some View {
         NavigationView {
             Form {
@@ -25,7 +26,7 @@ struct AddBoxView: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("保存") {
-                        vm.addBox(title: title, barcode: barcode.isEmpty ? nil : barcode)
+                        addBox()
                         isPresented = false
                     }.disabled(title.isEmpty)
                 }
@@ -40,6 +41,14 @@ struct AddBoxView: View {
                 }
             }
         }
+    }
+    private func addBox() {
+        let newBox = Box(context: context)
+        newBox.id = UUID()
+        newBox.title = title
+        newBox.barcode = barcode.isEmpty ? nil : barcode
+        
+        SyncManager.shared.saveContext()
     }
 }
 

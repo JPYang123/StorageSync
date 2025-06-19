@@ -1,10 +1,4 @@
-//
-//  StorageSyncApp.swift
-//  StorageSync
-//
-//  Created by Jiping Yang on 6/16/25.
-//
-
+// StorageSyncApp.swift
 import SwiftUI
 import UIKit
 
@@ -15,6 +9,7 @@ struct StorageSyncApp: App {
     var body: some Scene {
         WindowGroup {
             BoxListView()
+                .environment(\.managedObjectContext, SyncManager.shared.container.viewContext)
         }
     }
 }
