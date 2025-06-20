@@ -1,114 +1,134 @@
-// BoxDetailViewModel.swift
 import Foundation
-import Combine
-import CoreData
-import CloudKit
 import UIKit
+import SwiftUI
 
 @MainActor
-final class BoxDetailViewModel: ObservableObject {
+class BoxDetailViewModel: ObservableObject {
+    let box: Box
     @Published var items: [Item] = []
     @Published var photos: [Photo] = []
-    
-    let box: Box
-    private let context: NSManagedObjectContext
-    private var cancellables = Set<AnyCancellable>()
-    
-    init(box: Box, context: NSManagedObjectContext = SyncManager.shared.container.viewContext) {
+    @Published var error: Error?
+
+    private var observers: [NSObjectProtocol] = []
+
+    init(box: Box) {
         self.box = box
-        self.context = context
-        fetchContents()
-        
-        NotificationCenter.default.publisher(
-            for: .NSManagedObjectContextDidSave,
-            object: context
-        )
-        .sink { [weak self] _ in self?.fetchContents() }
-        .store(in: &cancellables)
-        
-        NotificationCenter.default.publisher(
-            for: .NSPersistentStoreRemoteChange,
-            object: SyncManager.shared.container.persistentStoreCoordinator
-        )
-        .sink { [weak self] _ in self?.fetchContents() }
-        .store(in: &cancellables)
+        // 订阅 Item 变化通知
+        observers.append(NotificationCenter.default.addObserver(
+            forName: .itemsDidChange,
+            object: nil,
+            queue: OperationQueue.main
+        ) { [weak self] _ in
+            self?.fetchItems()
+        })
+        // 订阅 Photo 变化通知
+        observers.append(NotificationCenter.default.addObserver(
+            forName: .photosDidChange,
+            object: nil,
+            queue: OperationQueue.main
+        ) { [weak self] _ in
+            self?.fetchPhotos()
+        })
+        // 初次加载
+        fetchItems()
+        fetchPhotos()
     }
-    
-    func fetchContents() {
-        items = box.items.sorted { ($0.name ?? "") < ($1.name ?? "") }
-        photos = box.photos.sorted {
-            ($0.localURL?.lastPathComponent ?? "") < ($1.localURL?.lastPathComponent ?? "")
-        }
+
+    deinit {
+        observers.forEach { NotificationCenter.default.removeObserver($0) }
     }
-    
-    // MARK: - Sharing
-    var share: CKShare? {
-        box.ckShare
-    }
-    
-    func createShare(completion: @escaping (CKShare?) -> Void) {
-        if let existing = box.ckShare {
-            completion(existing)
-            return
-        }
-        
-        let container = SyncManager.shared.container
-        container.share([box], to: nil) { objectIDs, share, _, error in
-            DispatchQueue.main.async {
-                if let share = share {
-                    self.box.ckShare = share
-                    SyncManager.shared.saveContext()
-                } else if let error = error {
-                    DebugLogger.log("Create share error: \(error)")
+
+    /// 获取所有 Item 并更新列表
+    func fetchItems() {
+        CloudKitManager.shared.fetchItems(for: box.id) { [weak self] result in
+            switch result {
+            case .success(let list):
+                let workItem = DispatchWorkItem {
+                    self?.items = list
                 }
-                completion(share)
+                DispatchQueue.main.async(execute: workItem)
+            case .failure(let e):
+                let workItem = DispatchWorkItem {
+                    self?.error = e
+                }
+                DispatchQueue.main.async(execute: workItem)
             }
         }
     }
-    
-    // MARK: - Item Management
-    func addItem(name: String, note: String? = nil) {
-        let item = Item(context: context)
-        item.id = UUID()
-        item.name = name
-        item.note = note
-        item.parent = box
-        
-        SyncManager.shared.saveContext()
-        fetchContents()
-    }
-    
-    func deleteItem(_ item: Item) {
-        context.delete(item)
-        SyncManager.shared.saveContext()
-        fetchContents()
-    }
-    
-    // MARK: - Photo Management
-    func addPhoto(image: UIImage) throws {
-        guard let data = image.jpegData(compressionQuality: 0.8) else { return }
-        
-        let documentsPath = FileManager.default.urls(for: .documentDirectory,
-                                                   in: .userDomainMask).first!
-        let url = documentsPath.appendingPathComponent("\(UUID().uuidString).jpg")
-        
-        try data.write(to: url)
-        
-        let photo = Photo(context: context)
-        photo.id = UUID()
-        photo.localURL = url
-        photo.box = box
-        
-        SyncManager.shared.saveContext()
-        fetchContents()
-    }
-    
-    func deletePhoto(_ photo: Photo) {
-        if let url = photo.localURL {
-            try? FileManager.default.removeItem(at: url)
+
+    /// 添加新 Item 并更新列表
+    func addItem(name: String) {
+        let newItem = Item(name: name, boxRef: box.id)
+        CloudKitManager.shared.saveItem(newItem) { [weak self] result in
+            switch result {
+            case .success(let saved):
+                let workItem = DispatchWorkItem {
+                    self?.items.insert(saved, at: 0)
+                }
+                DispatchQueue.main.async(execute: workItem)
+            case .failure(let e):
+                let workItem = DispatchWorkItem {
+                    self?.error = e
+                }
+                DispatchQueue.main.async(execute: workItem)
+            }
         }
-        context.delete(photo)
-        SyncManager.shared.saveContext()
-        fetchContents()
+    }
+
+    /// 删除 Item
+    func deleteItem(at offsets: IndexSet) {
+        offsets.compactMap { index in items[index].id }.forEach { id in
+            CloudKitManager.shared.delete(recordID: id) { _ in }
+        }
+    }
+
+    /// 获取所有 Photo 并更新列表
+    func fetchPhotos() {
+        CloudKitManager.shared.fetchPhotos(for: box.id) { [weak self] result in
+            switch result {
+            case .success(let list):
+                let workItem = DispatchWorkItem {
+                    self?.photos = list
+                }
+                DispatchQueue.main.async(execute: workItem)
+            case .failure(let e):
+                let workItem = DispatchWorkItem {
+                    self?.error = e
+                }
+                DispatchQueue.main.async(execute: workItem)
+            }
+        }
+    }
+
+    /// 添加新 Photo 并更新列表
+    func addPhoto(image: UIImage) {
+        // 将 UIImage 写入临时文件
+        let tempURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString + ".jpg")
+        if let data = image.jpegData(compressionQuality: 0.8) {
+            try? data.write(to: tempURL)
+        }
+        let newPhoto = Photo(imageURL: tempURL, boxRef: box.id)
+        CloudKitManager.shared.savePhoto(newPhoto) { [weak self] result in
+            switch result {
+            case .success(let savedPhoto):
+                let workItem = DispatchWorkItem {
+                    self?.photos.insert(savedPhoto, at: 0)
+                }
+                DispatchQueue.main.async(execute: workItem)
+            case .failure(let e):
+                let workItem = DispatchWorkItem {
+                    self?.error = e
+                }
+                DispatchQueue.main.async(execute: workItem)
+            }
+        }
+    }
+
+    /// 删除 Photo
+    func deletePhoto(at offsets: IndexSet) {
+        offsets.compactMap { index in photos[index].id }.forEach { id in
+            CloudKitManager.shared.delete(recordID: id) { _ in }
+        }
     }
 }

@@ -4,12 +4,8 @@ import UIKit
 
 @main
 struct StorageSyncApp: App {
-    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     var body: some Scene {
-        WindowGroup {
-            BoxListView()
-                .environment(\.managedObjectContext, SyncManager.shared.container.viewContext)
-        }
+        WindowGroup { BoxListView() }
     }
 }

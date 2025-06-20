@@ -1,47 +1,42 @@
 // BoxListView.swift
+// BoxListView.swift
 import SwiftUI
-import CloudKit
 
 struct BoxListView: View {
-    @StateObject private var vm = BoxListViewModel()
-    @State private var showingAddBox = false
-    
+    @StateObject private var vm = BoxesViewModel()
+    @State private var showAddSheet = false
+    @State private var newTitle = ""            // ← 单独声明
+
     var body: some View {
         NavigationView {
             List {
-                ForEach(vm.boxes, id: \.id) { box in
+                ForEach(vm.boxes) { box in
+                    // 修正 NavigationLink 用法
                     NavigationLink(destination: BoxDetailView(box: box)) {
-                        HStack {
-                            Text(box.title ?? "Untitled Box")
-                            Spacer()
-                            if let code = box.barcode, !code.isEmpty {
-                                Image(systemName: "barcode")
-                                    .foregroundColor(.secondary)
-                                    .help(code)
-                            }
-                        }
+                        BoxRow(box: box)
                     }
                 }
-                .onDelete(perform: delete)
+                .onDelete(perform: vm.delete)
             }
-            .navigationTitle("StorageSync")
+            .navigationTitle("Container")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { showingAddBox = true }) {
+                    Button {
+                        showAddSheet = true
+                    } label: {
                         Image(systemName: "plus")
                     }
                 }
             }
-            .sheet(isPresented: $showingAddBox) {
-                AddBoxView(isPresented: $showingAddBox)
+            .sheet(isPresented: $showAddSheet) {
+                NewBoxSheet(isPresented: $showAddSheet) { title in
+                    vm.add(title: title)
+                }
             }
         }
     }
-    
-    private func delete(at offsets: IndexSet) {
-        offsets.map { vm.boxes[$0] }.forEach(vm.deleteBox)
-    }
 }
+
 
 #Preview {
     BoxListView()

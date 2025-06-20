@@ -1,24 +1,18 @@
 // Box.swift
 import Foundation
-import CoreData
 import CloudKit
 
-@objc(Box)
-class Box: NSManagedObject {
-    @NSManaged var id: UUID?
-    @NSManaged var title: String?
-    @NSManaged var barcode: String?
-    @NSManaged var items: Set<Item>
-    @NSManaged var photos: Set<Photo>
-    @NSManaged var ckShare: CKShare?
-    
-    override func awakeFromInsert() {
-        super.awakeFromInsert()
-        if id == nil {
-            id = UUID()
-        }
-        if title == nil {
-            title = ""
-        }
+struct Box: Identifiable {
+    let id: CKRecord.ID; var title: String; var createdAt: Date
+    init(record: CKRecord) {
+        id = record.recordID
+        title = record["title"] as? String ?? ""
+        createdAt = record.creationDate ?? Date()
+    }
+    init(title: String) { id = CKRecord.ID(recordName: UUID().uuidString); self.title = title; createdAt = Date() }
+    func toRecord() -> CKRecord {
+        let r = CKRecord(recordType: "Box", recordID: id)
+        r["title"] = title as NSString
+        return r
     }
 }
