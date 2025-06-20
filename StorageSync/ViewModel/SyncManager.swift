@@ -22,7 +22,7 @@ final class SyncManager {
         description.setOption(true as NSNumber, forKey: NSPersistentStoreRemoteChangeNotificationPostOptionKey)
         
         // CloudKit configuration
-        let options = NSPersistentCloudKitContainerOptions(containerIdentifier: "iCloud.com.JPYang.SafePass")
+        let options = NSPersistentCloudKitContainerOptions(containerIdentifier: "iCloud.com.JPYang.StorageSync")
         options.databaseScope = .private
         description.cloudKitContainerOptions = options
         
