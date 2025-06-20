@@ -77,7 +77,10 @@ class BoxDetailViewModel: ObservableObject {
 
     /// 删除 Item
     func deleteItem(at offsets: IndexSet) {
-        offsets.compactMap { index in items[index].id }.forEach { id in
+        // Remove immediately from the local array so UI updates at once
+        let ids = offsets.compactMap { index in items[index].id }
+        items.remove(atOffsets: offsets)
+        for id in ids {
             CloudKitManager.shared.delete(recordID: id) { _ in }
         }
     }
@@ -127,7 +130,10 @@ class BoxDetailViewModel: ObservableObject {
 
     /// 删除 Photo
     func deletePhoto(at offsets: IndexSet) {
-        offsets.compactMap { index in photos[index].id }.forEach { id in
+        // Update local state first for immediate feedback
+        let ids = offsets.compactMap { index in photos[index].id }
+        photos.remove(atOffsets: offsets)
+        for id in ids {
             CloudKitManager.shared.delete(recordID: id) { _ in }
         }
     }
