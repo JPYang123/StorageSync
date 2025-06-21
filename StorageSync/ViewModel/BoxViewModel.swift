@@ -60,12 +60,6 @@ class BoxesViewModel: ObservableObject {
         
         group.notify(queue: .main) { [weak self] in
             self?.allLoadedItems = tempItems
-            print("📋 Loaded \(tempItems.count) total items for search")
-            
-            // Print all loaded items for debugging
-            for (index, item) in tempItems.enumerated() {
-                print("  \(index + 1). '\(item.name)' in box \(item.boxRef.recordName)")
-            }
         }
     }
     
@@ -104,20 +98,13 @@ class BoxesViewModel: ObservableObject {
             try? await Task.sleep(nanoseconds: 100_000_000) // 100ms delay
             
             guard !Task.isCancelled else { return }
-            
-            print("🔍 Local search for: '\(trimmed)' in \(allLoadedItems.count) items")
-            
+
             let filtered = allLoadedItems.filter { item in
                 item.name.localizedCaseInsensitiveContains(trimmed)
             }
             
-            print("✅ Found \(filtered.count) matching items")
             self.searchResults = filtered
         }
     }
     
-    /// Debug method to manually refresh all items
-    func debugRefreshItems() {
-        loadAllItems()
-    }
 }

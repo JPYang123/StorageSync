@@ -61,13 +61,6 @@ struct BoxListView: View {
             }
             .navigationTitle("Container")
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Debug") {
-                        CloudKitManager.shared.debugPrintAllItems()
-                    }
-                    .foregroundColor(.orange)
-                }
-                
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         showAddSheet = true
