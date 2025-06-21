@@ -6,7 +6,10 @@ struct BoxDetailView: View {
     @State private var newItem = ""              // ← 单独声明
     @State private var showPicker = false        // ← 单独声明
     @State private var showDeleteAlert = false
+    @State private var selectedPhoto: IndexIdentifier?
     @Environment(\.dismiss) private var dismiss
+    
+    struct IndexIdentifier: Identifiable { let id: Int }
     
     init(box: Box) {
         _vm = StateObject(wrappedValue: BoxDetailViewModel(box: box))
@@ -55,6 +58,9 @@ struct BoxDetailView: View {
                                             .resizable()
                                             .frame(width: 100, height: 100)
                                             .cornerRadius(8)
+                                            .onTapGesture {
+                                                 selectedPhoto = IndexIdentifier(id: index)
+                                             }
                                         Button(role: .destructive) {
                                             vm.deletePhoto(at: IndexSet(integer: index))
                                         } label: {
@@ -82,6 +88,9 @@ struct BoxDetailView: View {
                                 vm.addPhoto(image: img)
                             }
                         }
+                    }
+                    .fullScreenCover(item: $selectedPhoto) { item in
+                        PhotoGalleryView(photos: vm.photos, initialIndex: item.id)
                     }
                 }
                 
