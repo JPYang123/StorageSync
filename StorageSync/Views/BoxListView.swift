@@ -16,7 +16,6 @@ struct BoxListView: View {
                         BoxRow(box: box)
                     }
                 }
-                .onDelete(perform: vm.delete)
             }
             .navigationTitle("Container")
             .toolbar {

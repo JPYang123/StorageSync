@@ -137,4 +137,12 @@ class BoxDetailViewModel: ObservableObject {
             CloudKitManager.shared.delete(recordID: id) { _ in }
         }
     }
+    
+    /// Delete the current Box
+    func deleteBox(completion: @escaping () -> Void) {
+        CloudKitManager.shared.delete(recordID: box.id) { _ in
+            NotificationCenter.default.post(name: .boxesDidChange, object: nil)
+            completion()
+        }
+    }
 }

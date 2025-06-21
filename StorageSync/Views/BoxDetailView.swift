@@ -5,6 +5,8 @@ struct BoxDetailView: View {
     @StateObject private var vm: BoxDetailViewModel
     @State private var newItem = ""              // ← 单独声明
     @State private var showPicker = false        // ← 单独声明
+    @State private var showDeleteAlert = false
+    @Environment(\.dismiss) private var dismiss
     
     init(box: Box) {
         _vm = StateObject(wrappedValue: BoxDetailViewModel(box: box))
@@ -88,6 +90,25 @@ struct BoxDetailView: View {
             .padding()
         }
         .navigationTitle("Detail")
-    }    
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(role: .destructive) {
+                    showDeleteAlert = true
+                } label: {
+                    Image(systemName: "trash")
+                }
+            }
+        }
+        .alert("Delete Box", isPresented: $showDeleteAlert) {
+            Button("Delete", role: .destructive) {
+                vm.deleteBox {
+                    dismiss()
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Are you sure you want to delete this box?")
+        }
+    }
 }
 
