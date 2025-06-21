@@ -109,7 +109,13 @@ class BoxDetailViewModel: ObservableObject {
         let tempURL = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString + ".jpg")
         if let data = image.jpegData(compressionQuality: 0.8) {
-            try? data.write(to: tempURL)
+            do {
+                 try data.write(to: tempURL)
+             } catch {
+                 self.error = error
+                 Logger.log(error)
+                 return
+             }
         }
         let newPhoto = Photo(imageURL: tempURL, boxRef: box.id)
         CloudKitManager.shared.savePhoto(newPhoto) { [weak self] result in

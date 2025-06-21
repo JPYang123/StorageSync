@@ -118,6 +118,14 @@ struct BoxDetailView: View {
         } message: {
             Text("Are you sure you want to delete this box?")
         }
+        .alert("Error", isPresented: Binding(
+             get: { vm.error != nil },
+             set: { _ in vm.error = nil }
+         )) {
+             Button("OK", role: .cancel) {}
+         } message: {
+             Text(vm.error?.localizedDescription ?? "Unknown error")
+         }
     }
 }
 

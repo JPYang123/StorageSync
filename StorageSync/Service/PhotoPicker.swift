@@ -31,9 +31,11 @@ struct PhotoPicker: UIViewControllerRepresentable {
             for result in results {
                 group.enter()
                 if result.itemProvider.canLoadObject(ofClass: UIImage.self) {
-                    result.itemProvider.loadObject(ofClass: UIImage.self) { obj, _ in
+                    result.itemProvider.loadObject(ofClass: UIImage.self) { obj, error in
                         if let img = obj as? UIImage {
                             images.append(img)
+                        } else if let error = error {
+                             Logger.log(error)
                         }
                         group.leave()
                     }

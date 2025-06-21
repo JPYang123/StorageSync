@@ -27,7 +27,7 @@ final class CloudKitManager {
         sub.notificationInfo = info
         db.save(sub) { _, err in
             if let ck = err as? CKError, ck.code != .serverRejectedRequest {
-                // Handle subscription error
+                Logger.log(ck)
             }
         }
     }

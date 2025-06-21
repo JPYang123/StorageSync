@@ -94,6 +94,14 @@ struct BoxListView: View {
                     vm.searchItems(keyword: newValue) // FIXED: Use the correct method name
                 }
             }
+            .alert("Error", isPresented: Binding(
+                get: { vm.error != nil },
+                set: { _ in vm.error = nil }
+            )) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(vm.error?.localizedDescription ?? "Unknown error")
+            }
         }
     }
 }

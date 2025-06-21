@@ -33,6 +33,10 @@ struct ImagePicker: UIViewControllerRepresentable {
                 completion(ui)
             }
         }
+        
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            picker.dismiss(animated: true)
+        }
     }
 }
 
