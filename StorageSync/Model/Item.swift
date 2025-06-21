@@ -7,7 +7,12 @@ struct Item: Identifiable {
     init(record: CKRecord) {
         id = record.recordID
         name = record["name"] as? String ?? ""
-        boxRef = (record["box"] as? CKRecord.Reference)?.recordID ?? CKRecord.ID(recordName: "")
+        if let ref = record["box"] as? CKRecord.Reference {
+            boxRef = ref.recordID
+        } else {
+            // Generate a dummy ID to avoid empty reference crashes
+            boxRef = CKRecord.ID(recordName: UUID().uuidString)
+        }
     }
     init(name: String, boxRef: CKRecord.ID) {
         id = CKRecord.ID(recordName: UUID().uuidString); self.name = name; self.boxRef = boxRef

@@ -1,17 +1,31 @@
-// BoxListView.swift
 import SwiftUI
 import Combine
 
-struct BoxListView: View {
+struct BoxListViewWithDebug: View {
     @StateObject private var vm = BoxesViewModel()
     @State private var showAddSheet = false
     @State private var newTitle = ""
     @State private var searchText = ""
-    @State private var searchTimer: Timer?
     
     var body: some View {
         NavigationView {
             List {
+                // Debug section (remove this later)
+                Section("Debug Info") {
+                    Button("Test CloudKit Connection") {
+                        CloudKitManager.shared.testCloudKitConnection { success in
+                            print("CloudKit test result: \(success)")
+                        }
+                    }
+                    .foregroundColor(.blue)
+                    
+                    Button("Refresh All Items") {
+                        vm.debugRefreshItems()
+                    }
+                    .foregroundColor(.green)
+                }
+                
+                // Main content
                 if searchText.isEmpty {
                     ForEach(vm.boxes) { box in
                         NavigationLink(destination: BoxDetailView(box: box)) {
@@ -41,13 +55,6 @@ struct BoxListView: View {
             }
             .navigationTitle("Container")
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Debug") {
-                        CloudKitManager.shared.debugPrintAllItems()
-                    }
-                    .foregroundColor(.orange)
-                }
-                
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         showAddSheet = true
@@ -62,17 +69,12 @@ struct BoxListView: View {
                 }
             }
             .searchable(text: $searchText, prompt: "Search Items")
-            .onChange(of: searchText) { newValue in
-                // Simple timer-based debouncing
-                searchTimer?.invalidate()
-                searchTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: false) { _ in
-                    vm.searchItems(keyword: newValue) // FIXED: Use the correct method name
-                }
+            .onReceive(
+                Just(searchText)
+                    .debounce(for: .milliseconds(300), scheduler: RunLoop.main)
+            ) { debouncedSearchText in
+                vm.searchItems(keyword: debouncedSearchText)
             }
         }
     }
-}
-
-#Preview {
-    BoxListView()
 }

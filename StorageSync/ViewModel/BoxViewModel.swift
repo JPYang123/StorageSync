@@ -1,42 +1,79 @@
-// 3. ViewModel - listen for notifications and reload
-
 import Foundation
 
-// BoxesViewModel.swift
 @MainActor
 class BoxesViewModel: ObservableObject {
     @Published var boxes: [Box] = []
+    @Published var searchResults: [Item] = []
     @Published var error: Error?
-
+    
+    // Store all items locally for search
+    private var allLoadedItems: [Item] = []
+    private var searchTask: Task<Void, Never>?
+    
     init() {
-        // 订阅远端变化
         NotificationCenter.default.addObserver(
             forName: .boxesDidChange, object: nil, queue: .main
-        ) { [weak self] _ in self?.reload() }
-
+        ) { [weak self] _ in
+            self?.reload()
+        }
+        
+        NotificationCenter.default.addObserver(
+            forName: .itemsDidChange, object: nil, queue: .main
+        ) { [weak self] _ in
+            self?.loadAllItems()
+        }
+        
         reload()
     }
-
+    
     func reload() {
         CloudKitManager.shared.fetchBoxes { [weak self] res in
             DispatchQueue.main.async {
                 switch res {
                 case .success(let b):
                     self?.boxes = b.sorted { $0.createdAt > $1.createdAt }
+                    // After loading boxes, load all items
+                    self?.loadAllItems()
                 case .failure(let e):
                     self?.error = e
                 }
             }
         }
     }
-
-    // 🚀 修改这里：新增后立即更新本地数组
+    
+    /// Load all items from all boxes
+    private func loadAllItems() {
+        guard !boxes.isEmpty else { return }
+        
+        var tempItems: [Item] = []
+        let group = DispatchGroup()
+        
+        for box in boxes {
+            group.enter()
+            CloudKitManager.shared.fetchItems(for: box.id) { result in
+                if case .success(let items) = result {
+                    tempItems.append(contentsOf: items)
+                }
+                group.leave()
+            }
+        }
+        
+        group.notify(queue: .main) { [weak self] in
+            self?.allLoadedItems = tempItems
+            print("📋 Loaded \(tempItems.count) total items for search")
+            
+            // Print all loaded items for debugging
+            for (index, item) in tempItems.enumerated() {
+                print("  \(index + 1). '\(item.name)' in box \(item.boxRef.recordName)")
+            }
+        }
+    }
+    
     func add(title: String) {
         CloudKitManager.shared.saveBox(Box(title: title)) { [weak self] result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let newBox):
-                    // 把最新的箱子插到列表最前面
                     self?.boxes.insert(newBox, at: 0)
                 case .failure(let e):
                     self?.error = e
@@ -44,11 +81,43 @@ class BoxesViewModel: ObservableObject {
             }
         }
     }
-
+    
     func delete(at offsets: IndexSet) {
         for idx in offsets {
             let box = boxes[idx]
             CloudKitManager.shared.delete(recordID: box.id) { _ in }
         }
+    }
+    
+    /// LOCAL SEARCH ONLY - No CloudKit queries
+    func searchItems(keyword: String) {
+        searchTask?.cancel()
+        
+        let trimmed = keyword.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        guard !trimmed.isEmpty else {
+            searchResults = []
+            return
+        }
+        
+        searchTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 100_000_000) // 100ms delay
+            
+            guard !Task.isCancelled else { return }
+            
+            print("🔍 Local search for: '\(trimmed)' in \(allLoadedItems.count) items")
+            
+            let filtered = allLoadedItems.filter { item in
+                item.name.localizedCaseInsensitiveContains(trimmed)
+            }
+            
+            print("✅ Found \(filtered.count) matching items")
+            self.searchResults = filtered
+        }
+    }
+    
+    /// Debug method to manually refresh all items
+    func debugRefreshItems() {
+        loadAllItems()
     }
 }

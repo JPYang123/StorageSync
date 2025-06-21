@@ -7,7 +7,11 @@ struct Photo: Identifiable {
     init(record: CKRecord) {
         id = record.recordID
         asset = record["image"] as! CKAsset
-        boxRef = (record["box"] as? CKRecord.Reference)?.recordID ?? CKRecord.ID(recordName: "")
+        if let ref = record["box"] as? CKRecord.Reference {
+            boxRef = ref.recordID
+        } else {
+            boxRef = CKRecord.ID(recordName: UUID().uuidString)
+        }
     }
     init(imageURL: URL, boxRef: CKRecord.ID) {
         id = CKRecord.ID(recordName: UUID().uuidString)
